@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.CapitalX/homeport",
+  "title": "Homeport",
+  "description": "Apple Calendar, Reminders, Contacts, Notes, Messages and Shortcuts for AI, over Tailscale",
+  "version": "1.8.0",
+  "repository": {
+    "url": "https://github.com/CapitalX/homeport",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/CapitalX/homeport#-quick-start"
+}
