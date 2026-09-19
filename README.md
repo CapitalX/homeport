@@ -8,7 +8,8 @@ Built on Apple's own EventKit, Contacts and Speech frameworks. No AppleScript gu
 
 ```
 ┌──────────────┐     Tailscale (WireGuard)      ┌────────────────────────┐
-│  iPhone      │ ──────────────────────────────▶│  Homeport (your Mac)   │
+│  iPhone      |                                |                        |
+|  Android     │ ──────────────────────────────▶│  Homeport (your Mac)   │
 │  Laptop      │        HTTPS + identity        │  ├─ EventKit           │
 │  Desktop     │                                │  ├─ Contacts           │
 └──────────────┘                                │  ├─ Notes (AppleEvents)│
