@@ -222,8 +222,11 @@ if [[ "$fold" != __* ]]; then
                                 || red "notes_query folder scoping broken: $out"
 fi
 out=$(call notes_query '{"folder":"__nope__","limit":1}')
-[[ "$out" == __TOOL_ERROR__*"No folder named"* ]] && green "unknown folder gives a named error" \
-                                                  || red "unknown folder did not error cleanly"
+# The error lists every folder, so with a read-blocked folder configured the
+# note guard withholds it -- still a clean, recognisable error.
+[[ "$out" == __TOOL_ERROR__*"No folder named"* || "$out" == __TOOL_ERROR__*"read-blocked"* ]] \
+    && green "unknown folder gives a clean error (named, or withheld by the note guard)" \
+    || red "unknown folder did not error cleanly"
 
 # idempotencyKey must be DISCOVERABLE, not just accepted: it was reachable from
 # the start but declared in zero schemas, so no client could find it.
