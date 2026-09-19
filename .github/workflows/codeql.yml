@@ -5,9 +5,20 @@ name: CodeQL
 # the job is skipped until the repository is public rather than failing.
 
 on:
+  # A Swift CodeQL run takes ~10 minutes (it rebuilds the package under the
+  # extractor), so it only runs when something it analyses can have changed.
+  # The weekly schedule still re-scans unchanged code with newly added queries.
   push:
     branches: [main]
+    paths:
+      - 'Sources/**'
+      - 'Package.swift'
+      - '.github/workflows/codeql.yml'
   pull_request:
+    paths:
+      - 'Sources/**'
+      - 'Package.swift'
+      - '.github/workflows/codeql.yml'
   schedule:
     - cron: '17 6 * * 1'   # weekly, so new CodeQL queries run against unchanged code
   workflow_dispatch:
