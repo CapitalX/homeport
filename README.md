@@ -28,7 +28,7 @@ Homeport is different in three ways:
 
 ## 🚀 Quick Start
 
-**Requirements:** macOS 14+ (26+ for on-device transcription), Xcode command line tools, and an admin account.
+**Requirements:** macOS 14+ to run (26+ for on-device transcription); Xcode 26 or later, or its command line tools, to build — the transcriber needs the macOS 26 SDK even though the binary runs on 14; and an admin account.
 
 ```bash
 git clone https://github.com/CapitalX/homeport.git
