@@ -1,0 +1,17 @@
+{
+  "_comment": "Copy to ~/Library/Application Support/homeport/schedule.json and edit. Every key is optional; an absent or malformed one keeps its default. Times are local HH:MM.",
+  "workStart": "09:00",
+  "workEnd": "17:00",
+  "morningStart": "07:00",
+  "morningEnd": "09:00",
+  "eveningStart": "19:00",
+  "eveningEnd": "22:00",
+  "workFlagCalendar": "Work",
+  "protectedCalendars": ["Family"],
+  "protectedTitles": ["focus", "do not schedule"],
+  "dayOffCalendars": ["Holidays"],
+  "workLists": ["Work"],
+  "personalLists": ["Personal"],
+  "excludedLists": ["Shopping"],
+  "slotMinutes": 30
+}

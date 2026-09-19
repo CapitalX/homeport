@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required because we sign with the hardened runtime.
+
+         Under hardened runtime macOS does not merely refuse a privacy protected
+         resource without these keys. It refuses SILENTLY: no prompt is drawn,
+         no error is returned, and the authorization status simply stays
+         `notDetermined` forever. That failure looks identical to a missing
+         usage string or a broken TCC row, which is what made it slow to find.
+         The usage strings in Info.plist are necessary but not sufficient; both
+         halves have to be present.
+
+         An existing grant can mask a missing entitlement, because the request
+         short circuits instead of asking. Verify each capability on a clean
+         grant, not one inherited from an earlier build.
+
+         Note for future edits: XML comments may not contain a double hyphen.
+         AMFI rejects the whole file with "syntax error" if one appears. -->
+
+    <!-- EventKit. Calendar and Reminders both sit behind this one key. -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
+
+    <!-- CNContactStore. -->
+    <key>com.apple.security.personal-information.addressbook</key>
+    <true/>
+
+    <!-- NSAppleScript driving Notes.app, and later Messages.app. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+</dict>
+</plist>

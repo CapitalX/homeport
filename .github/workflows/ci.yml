@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # The tests need no Apple framework access -- classifier, trust table,
+    # handle normalization, audit redaction, scheduling -- so they need no TCC
+    # grant and no signed bundle. Anything requiring a real permission grant lives in
+    # pipeline/selftest.sh, which needs a provisioned Mac and is not run here.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

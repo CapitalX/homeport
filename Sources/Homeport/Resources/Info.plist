@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>dev.homeport.bridge</string>
+    <key>CFBundleName</key>
+    <string>Apple MCP Bridge</string>
+    <key>CFBundleExecutable</key>
+    <string>Homeport</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- Agent-style app: never appears in the Dock or the app switcher. It is
+         spawned by an MCP client or run as a LaunchAgent, never launched by a person. -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- macOS 14 (Sonoma)+ full-access usage strings. Without these, EventKit
+         permission prompts silently never fire. -->
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Calendar events on behalf of your local AI assistant.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Reminders on behalf of your local AI assistant.</string>
+
+    <!-- Pre-Sonoma fallback keys. -->
+    <key>NSCalendarsUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Calendar events on behalf of your local AI assistant.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Reminders on behalf of your local AI assistant.</string>
+
+    <!-- Write-only fallback (some macOS versions request this variant). -->
+    <key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+    <string>Apple MCP Bridge adds Calendar events on behalf of your local AI assistant.</string>
+
+    <!-- Apple Events, for Apple Notes. Notes has no EventKit-style framework,
+         so it is driven over Apple Events; without this key the Automation
+         prompt never fires and every Notes call fails with -1743. -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Apple Notes on behalf of your local AI assistant.</string>
+
+    <!-- A local OpenAI-compatible model is reached over plain HTTP. ATS blocks
+         cleartext by default, so it is allowed only for localhost and local
+         networking (NSAllowsLocalNetworking, which admits .local names and
+         private/tailnet address literals) rather than switching on
+         NSAllowsArbitraryLoads, which would permit cleartext to anywhere.
+         Any other cleartext host needs its domain added here: exception
+         domains match hostnames only. -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>localhost</key>
+            <dict><key>NSExceptionAllowsInsecureHTTPLoads</key><true/></dict>
+        </dict>
+    </dict>
+
+    <!-- On-device speech recognition, for transcribing Mac-recorded voice
+         memos that carry no embedded transcript. Audio never leaves the Mac. -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Apple MCP Bridge transcribes your voice memos on this Mac, using Apple's on-device speech model.</string>
+
+    <!-- Contacts access. -->
+    <key>NSContactsUsageDescription</key>
+    <string>Apple MCP Bridge reads and writes your Contacts on behalf of your local AI assistant.</string>
+</dict>
+</plist>

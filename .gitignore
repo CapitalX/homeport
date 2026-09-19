@@ -1,0 +1,21 @@
+.DS_Store
+.build/
+bin/
+*.xcodeproj
+*.xcworkspace
+.swiftpm/
+Package.resolved
+
+# Claude Code worktrees — never commit them
+.claude/worktrees/
+
+# Generated on first build from THIS machine's signing certificate, and compared
+# on every later build to catch an identity change before it silently drops all
+# privacy grants. Machine-local state, never shared: an adopter's certificate is
+# not yours, and a committed pin would abort their very first build.
+deploy/signing-identity.pin
+
+# The operator's own voice-memo taxonomy. deploy/categories.example.json is the
+# shipped starting point; the real one lives in Application Support.
+categories.json
+

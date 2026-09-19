@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Voice-memo categories. Copy to ~/Library/Application Support/homeport/categories.json and edit.",
+    "With no file present, classification returns 'unknown' and summaries use a generic prompt.",
+    "",
+    "  strong / weak  vocabulary that identifies this category. A strong term counts fully,",
+    "                 a weak one counts a third. A category needs several DISTINCT matches",
+    "                 before it can override the window rule, so put unambiguous words in",
+    "                 'strong' and merely-suggestive ones in 'weak'.",
+    "  window         optional time rule. weekdays uses 1=Sunday..7=Saturday; start/endMinute",
+    "                 are minutes into the day (540 = 09:00).",
+    "  confidential   true means the summary is written to Notes and NEVER returned to the",
+    "                 caller. Default is true. Only set false for things you are happy for a",
+    "                 remote model to read back.",
+    "  sections       how the filed note is laid out: heading plus the JSON key it renders."
+  ],
+  "categories": [
+    {
+      "name": "meeting",
+      "strong": ["agenda", "attendees", "standup", "retro", "roadmap", "stakeholder", "deliverable", "milestone"],
+      "weak": ["deadline", "blocker", "followup", "decision", "action", "scope", "timeline"],
+      "window": { "weekdays": [2, 3, 4, 5, 6], "startMinute": 540, "endMinute": 1080, "minimumDurationMinutes": 5, "confidence": 0.7 },
+      "confidential": true,
+      "folder": "Meetings",
+      "createReminders": true,
+      "extractionPrompt": "Summarize this meeting. Return ONLY this JSON shape:\n{\"title\":\"<8 words max>\",\n \"summary\":\"<3 sentences>\",\n \"decisions\":[\"<decision actually made>\"],\n \"actionItems\":[{\"task\":\"<imperative>\",\"owner\":\"<name or unspecified>\",\"due\":\"<yyyy-MM-dd or unspecified>\"}],\n \"openQuestions\":[\"<question left unresolved>\"]}\nUse \"unspecified\" when the transcript does not say. Do not turn discussion into a decision unless it was actually settled.",
+      "sections": [
+        { "heading": "Decisions", "key": "decisions" },
+        { "heading": "Action Items", "key": "actionItems" },
+        { "heading": "Open Questions", "key": "openQuestions" }
+      ]
+    },
+    {
+      "name": "idea",
+      "strong": ["prototype", "concept", "brainstorm", "hypothesis"],
+      "weak": ["maybe", "experiment", "sketch", "rough", "explore", "what if"],
+      "confidential": true,
+      "folder": "Ideas",
+      "createReminders": false,
+      "extractionPrompt": "Summarize this idea recording. Return ONLY this JSON shape:\n{\"title\":\"<6 words max>\",\n \"summary\":\"<2-3 sentences>\",\n \"points\":[\"<the idea, stated plainly>\"],\n \"nextSteps\":[\"<concrete next step, only if one was actually said>\"]}\nDo not invent next steps that were not mentioned.",
+      "sections": [
+        { "heading": "Points", "key": "points" },
+        { "heading": "Next Steps", "key": "nextSteps" }
+      ]
+    }
+  ]
+}
