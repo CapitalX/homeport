@@ -9,9 +9,13 @@
 #   1. Identifiers: home paths, real tailnet hosts and addresses, email
 #      addresses, phone numbers and certificate hashes, outside a small
 #      allowlist of documentation placeholders.
-#   2. Git metadata: every author, committer and tagger email must be a GitHub
-#      noreply address. With no user.email set, git fabricates one from the
-#      hostname -- a stable device identifier in every commit.
+#   2. Git metadata: author, committer and tagger emails that are not GitHub
+#      noreply addresses are REPORTED as a warning, not a failure. Every
+#      contributor's git needs some email, and that choice is theirs; the
+#      warning exists so the maintainer notices their own real address (a web
+#      edit with email privacy off, or a machine with no user.email, where git
+#      fabricates one from the hostname -- a stable device identifier).
+#      Email addresses inside FILES still fail check 1.
 #   3. Vocabulary: words that would characterise the maintainer -- list and
 #      calendar names, routines, employer, places. The list is PRIVATE by
 #      nature (publishing it would disclose exactly what it protects), so it is
@@ -32,6 +36,11 @@ cd "$(git rev-parse --show-toplevel)" || { echo "not inside the repository" >&2;
 FAIL=0
 fail() { printf '\033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
 ok()   { printf '\033[32m  OK\033[0m  %s\n' "$1"; }
+warn() {
+    printf '\033[33mWARN\033[0m  %s\n' "$1"
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::warning::privacy sweep: $1"
+    return 0
+}
 indent() { while IFS= read -r line; do printf '        %s\n' "$line"; done <<< "$1"; }
 
 # Tracked files only, so build output and untracked scratch never count.
@@ -79,9 +88,9 @@ bad="$( { git log --all --format='%ae%n%ce'
 if [[ -z "$bad" ]]; then
     ok "every author, committer and tagger email is a GitHub noreply address"
 else
-    # Emails are identifiers, but these are already public in the pushed
-    # history this check is reading; naming them is what makes them fixable.
-    fail "non-noreply identities in history:"; indent "$bad"
+    # Emails are identifiers, but these are already in the history this check
+    # is reading; naming them is what lets the owner decide whether it matters.
+    warn "non-noreply identities in history (not a failure; see header):"; indent "$bad"
 fi
 
 echo "== vocabulary"
