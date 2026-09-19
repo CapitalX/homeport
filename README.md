@@ -123,7 +123,7 @@ bridge.
 | `calendar_create_event` | Create an event — title, times, location, recurrence, alarms |
 | `calendar_update_event` | Update by id; `span` controls this-occurrence vs this-and-future |
 | `calendar_delete_event` | Delete by id; requires `confirmDelete` |
-| `calendar_calendars` | List, create, or delete calendars |
+| `calendar_calendars` | List, create, or delete calendars; delete requires `confirmDelete` |
 
 ### Reminders
 | Tool | Description |
@@ -133,7 +133,7 @@ bridge.
 | `reminders_update` | Update any field; `clearDue` removes a due date |
 | `reminders_complete` | Mark complete or incomplete |
 | `reminders_delete` | Delete by id; requires `confirmDelete` |
-| `reminders_lists` | List, create, rename, merge, or delete lists |
+| `reminders_lists` | List, create, rename, merge, or delete lists; delete requires `confirmDelete` |
 | `reminders_bulk_create` | Create many in one call |
 | `reminders_bulk_update` | Apply one change across many, by id or filter |
 | `reminders_bulk_delete` | Delete many, by id or filter |
@@ -392,7 +392,7 @@ Full diagnostics: `./deploy/healthcheck.sh`
 
 **One request at a time.** HTTP accepts connections in parallel, but every dispatch funnels through one serial queue, so handlers may assume no concurrency.
 
-**One exit point.** Every tool result leaves through a single function where the untrusted envelope and the audit record are applied; the note guard filters every successful result and every idempotent replay just before it. Error messages are not filtered, so they must never carry note content.
+**One exit point.** Every tool result — success, replay or error — leaves through a single function where the note guard, the untrusted envelope and the audit record are applied. Earlier versions built responses at five separate exits and the error paths bypassed the guard — a real leak. Errors from a Notes call that involves a read-blocked folder or note are replaced with a generic refusal, since an AppleScript error can echo a note's title back.
 
 **No shelling out.** Notes is driven by in-process `NSAppleScript`, never `osascript` — shelling out would attribute the Automation grant to `osascript` and fragment the single-identity story. The one exception is `/usr/bin/shortcuts`, which has no in-process equivalent; it is spawned from a single call site, always with a hard deadline.
 

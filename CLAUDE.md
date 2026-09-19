@@ -68,9 +68,9 @@ Three ordered steps, and the order is load-bearing: `--grant` bootstrap (must pr
 
 ### Request lifecycle — the chokepoint
 
-Everything funnels through `MCPServer.handleToolCall` → `respondTool`. That single exit is where the audit record and the `Untrusted` envelope are applied. `NoteGuard.filter` runs on every *successful* result and on idempotency replays, just before `respondTool`; error strings do not pass through it, so **an error message must never include note content**. Do not build a `content` block anywhere but `respondTool`.
+Everything funnels through `MCPServer.handleToolCall` → `respondTool`. That single exit is where every guard is applied: callers pass the *raw* outcome (a result, an idempotency replay, or an error message), and `respondTool` runs `NoteGuard.filter` on results and replays, `NoteGuard.scrubError` on errors, then the audit record and the `Untrusted` envelope on everything. Earlier versions built responses at five exits and the error paths bypassed `NoteGuard` — a real leak, since an untargeted `notes_query` error listed every folder name. **Add a new exit and it inherits the guards by construction — do not build a `content` block anywhere else.**
 
-Order inside `handleToolCall`: strip `idempotencyKey` → idempotency replay (which re-runs `NoteGuard`, because the replay path never enters the handler) → unknown-argument rejection → handler → `NoteGuard.filter` → record idempotency (successes only) → `respondTool`.
+Order inside `handleToolCall`: strip `idempotencyKey` → idempotency replay → unknown-argument rejection → handler → `respondTool`. Inside `respondTool`: `NoteGuard.filter` (results, replays) or `NoteGuard.scrubError` (errors) → record idempotency (fresh successes only) → audit → envelope.
 
 ### The security layers, and what each one actually is
 
@@ -111,7 +111,7 @@ the other turns into a red build rather than a field the bulk path rejects as un
 - **One request at a time.** HTTP accepts concurrently but every dispatch hops onto one serial queue. Handlers may assume no concurrency.
 - **Read-only against Voice Memos.** `CloudRecordings.db` is copied (with `-wal`/`-shm`) to a temp dir and read there; never opened in place.
 - **Summaries in a confidential category never return to the caller.** They are written straight into Notes. `confirmMayLeaveMachine: true` is the deliberate escape hatch. This rule is enforced in code — do not "helpfully" return the text.
-- Destructive tools require an explicit flag: `confirmDelete` for event, reminder and contact deletion, `confirm` for merges and `shortcuts_run`, `confirmReplace` for replacing or adding to a contact's phones/emails/URLs (refused with an error, not previewed, without it). **Deleting a whole calendar or reminder list (`action: delete`) currently takes no confirmation.**
+- Destructive tools require an explicit flag: `confirmDelete` for event, reminder and contact deletion, `confirm` for merges and `shortcuts_run`, `confirmReplace` for replacing or adding to a contact's phones/emails/URLs (refused with an error, not previewed, without it). Deleting a whole calendar (`calendar_calendars`) or reminder list (`reminders_lists`) with `action: delete` also needs `confirmDelete: true`, and previews how many events or reminders would go with it otherwise.
 
 ## Surviving reboots and macOS updates
 

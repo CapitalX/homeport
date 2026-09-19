@@ -32,6 +32,19 @@ final class AuditLogTests: XCTestCase {
         XCTAssertFalse(dumped.contains("5559998888"), "the new number is a value, not metadata")
     }
 
+    /// Whole-calendar and whole-list deletion are the largest deletions the
+    /// server can make, so whether they were confirmed is part of the record.
+    func testCalendarAndListDeletionRecordConfirmation() {
+        let cal = AuditLog.detail(tool: "calendar_calendars",
+                                  args: ["action": "delete", "calendar": "Old", "confirmDelete": true])
+        XCTAssertEqual(cal["action"] as? String, "delete")
+        XCTAssertEqual(cal["confirmed"] as? Bool, true)
+        let list = AuditLog.detail(tool: "reminders_lists", args: ["action": "delete", "list": "Old"])
+        XCTAssertEqual(list["confirmed"] as? Bool, false)
+        XCTAssertTrue(AuditLog.detail(tool: "calendar_calendars", args: [:]).isEmpty,
+                      "listing calendars is not worth a line")
+    }
+
     func testReadToolsRecordNoDetail() {
         XCTAssertTrue(AuditLog.detail(tool: "notes_read", args: ["id": "x"]).isEmpty)
         XCTAssertTrue(AuditLog.detail(tool: "messages_query", args: ["search": "bank"]).isEmpty,

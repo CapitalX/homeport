@@ -205,4 +205,48 @@ enum NoteGuard {
         return out
     }
 
+    // MARK: - Error filtering
+
+    /// What a Notes-touching call that involves protected content says when it
+    /// fails. Contains "read-blocked" so callers can still tell a policy
+    /// refusal from an outage; says nothing else.
+    static let withheldError = "A request involving a read-blocked Notes folder failed. "
+        + "Details are withheld by policy."
+
+    /// Scrub an error message before it reaches the wire.
+    ///
+    /// Errors are text, not a result object, so `filter` cannot see them -- and
+    /// an AppleScript failure can echo a note's title or folder straight back
+    /// ("Can't get note \"...\""). Rather than trust every error site to phrase
+    /// itself safely, any Notes-touching call that involves a protected note or
+    /// folder has its error replaced wholesale.
+    static func scrubError(tool: String, args: JSONObject, message: String) -> String {
+        guard isActive else { return message }
+        let out = scrubError(tool: tool, args: args, message: message,
+                             blockedFolders: blockedFolders,
+                             isProtectedId: { isProtected(id: $0) })
+        // The guard keeps this out of AI clients, not out of the operator's
+        // own diagnostics: without the original, a failing automation that
+        // writes into a blocked folder would be undebuggable. stderr goes to
+        // the daemon's local log on this Mac, never to a caller.
+        if out != message { Log.warn("noteguard: withheld \(tool) error from the caller: \(message)") }
+        return out
+    }
+
+    /// The decision, separated from policy and Notes so it can be tested.
+    static func scrubError(tool: String, args: JSONObject, message: String,
+                           blockedFolders: [String],
+                           isProtectedId: (String) -> Bool) -> String {
+        guard !blockedFolders.isEmpty,
+              tool.hasPrefix("notes_") || tool == "voicememos_summarize" else { return message }
+        let namesBlockedFolder = args.string("folder").map(blockedFolders.contains) ?? false
+        let namesProtectedNote = [args.string("id"), args.string("noteId")]
+            .compactMap { $0 }
+            .contains(where: isProtectedId)
+        // Fails safe: an error that so much as mentions a blocked folder by
+        // name is withheld, even when the arguments did not point there.
+        let mentionsBlockedFolder = blockedFolders.contains { message.contains($0) }
+        guard namesBlockedFolder || namesProtectedNote || mentionsBlockedFolder else { return message }
+        return withheldError
+    }
 }

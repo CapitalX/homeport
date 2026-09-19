@@ -149,8 +149,8 @@ enum AuditLog {
             return d
 
         case "reminders_lists":
-            // Only the destructive shapes are worth a line. merge deletes a
-            // list, which is the one action here that can take reminders with it.
+            // Only the destructive shapes are worth a line. merge and delete
+            // both remove a list, and delete takes its reminders with it.
             let action = args.string("action") ?? "list"
             guard ["create", "rename", "merge", "delete"].contains(action) else { return [:] }
             var d: [String: Any] = ["action": action]
@@ -158,6 +158,18 @@ enum AuditLog {
                 if let v = args.string(key) { d[key] = v }
             }
             if action == "merge" { d["confirmed"] = args.bool("confirmMerge") == true }
+            if action == "delete" { d["confirmed"] = args.bool("confirmDelete") == true }
+            return d
+
+        case "calendar_calendars":
+            // Same reasoning: deleting a calendar takes every event with it.
+            let action = args.string("action") ?? "list"
+            guard ["create", "delete"].contains(action) else { return [:] }
+            var d: [String: Any] = ["action": action]
+            for key in ["name", "calendar", "calendarId"] {
+                if let v = args.string(key) { d[key] = v }
+            }
+            if action == "delete" { d["confirmed"] = args.bool("confirmDelete") == true }
             return d
 
         case "reminders_bulk_create":

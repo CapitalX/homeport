@@ -25,7 +25,8 @@ enum ReminderTools {
         description: """
         List, create, rename, merge, or delete Reminders lists. action=list (default) returns all \
         lists; create needs `name`; rename needs `list`/`listId` plus the new `name`; merge needs \
-        `from` and `into`; delete needs `listId` or `list`.
+        `from` and `into`; delete needs `listId` or `list` AND `confirmDelete: true` — deleting a list \
+        deletes every reminder in it, so without the flag it only previews.
 
         merge moves every reminder out of `from` into `into` and then deletes the emptied list — the \
         natural end of a restructure, which otherwise cannot be expressed. It requires \
@@ -42,6 +43,7 @@ enum ReminderTools {
             "from": Schema.string("Source list name or id (for merge) — emptied, then deleted"),
             "into": Schema.string("Destination list name or id (for merge)"),
             "confirmMerge": Schema.boolean("Must be true to actually merge. Omit to preview."),
+            "confirmDelete": Schema.boolean("Must be true to actually delete (for delete). Omit to preview."),
             "color": Schema.string("Hex color like #FF9500 (for create)")
         ]),
         handler: { args in
@@ -144,6 +146,21 @@ enum ReminderTools {
                     throw ToolError("List not found. Provide a valid `listId` or `list` name.")
                 }
                 let title = cal.title
+                // Deleting a list deletes every reminder in it. Same gate as
+                // deleting a single reminder, and a preview that says how many.
+                guard args.bool("confirmDelete") == true else {
+                    let inside = ek.fetchReminders(ek.store.predicateForReminders(in: [cal]))
+                    let open = inside.filter { !$0.isCompleted }.count
+                    return [
+                        "deleted": false,
+                        "wouldDelete": EKMapper.calendar(cal),
+                        "reminders": inside.count,
+                        "incomplete": open,
+                        "message": "Not deleted. Deleting '\(title)' removes all \(inside.count) "
+                            + "reminder(s) in it (\(open) incomplete) on every synced device. Use "
+                            + "action merge to keep them, or re-call with confirmDelete: true."
+                    ] as JSONObject
+                }
                 try ek.store.removeCalendar(cal, commit: true)
                 return ["deleted": title]
             default:

@@ -16,13 +16,14 @@ enum CalendarTools {
 
     private static let calendarsTool = Tool(
         name: "calendar_calendars",
-        description: "List, create, or delete event calendars. action=list (default) returns all; action=create needs `name` (optional `color`); action=delete needs `calendarId` or `calendar` (name). Note: some accounts (e.g. certain iCloud/Exchange setups) do not permit programmatic calendar creation/deletion.",
+        description: "List, create, or delete event calendars. action=list (default) returns all; action=create needs `name` (optional `color`); action=delete needs `calendarId` or `calendar` (name) AND `confirmDelete: true` — deleting a calendar deletes every event in it and syncs everywhere, so without the flag it only previews. Note: some accounts (e.g. certain iCloud/Exchange setups) do not permit programmatic calendar creation/deletion.",
         inputSchema: Schema.object([
             "action": Schema.string("list | create | delete", enumValues: ["list", "create", "delete"]),
             "name": Schema.string("Calendar name (for create)"),
             "calendar": Schema.string("Existing calendar name (for delete)"),
             "calendarId": Schema.string("Existing calendar id (for delete)"),
-            "color": Schema.string("Hex color like #34C759 (for create)")
+            "color": Schema.string("Hex color like #34C759 (for create)"),
+            "confirmDelete": Schema.boolean("Must be true to actually delete (for delete). Omit to preview.")
         ]),
         handler: { args in
             try ek.ensureAccess(.event)
@@ -53,6 +54,24 @@ enum CalendarTools {
                     throw ToolError("Calendar not found. Provide a valid `calendarId` or `calendar` name.")
                 }
                 let title = cal.title
+                // A whole calendar takes every event in it, irreversibly and on
+                // every synced device -- the largest single deletion this server
+                // can make, so it gets the same gate as deleting one event.
+                guard args.bool("confirmDelete") == true else {
+                    let now = Date()
+                    let yearAgo = Calendar.current.date(byAdding: .year, value: -1, to: now) ?? now
+                    let yearAhead = Calendar.current.date(byAdding: .year, value: 1, to: now) ?? now
+                    let nearby = ek.store.events(matching: ek.store.predicateForEvents(
+                        withStart: yearAgo, end: yearAhead, calendars: [cal])).count
+                    return [
+                        "deleted": false,
+                        "wouldDelete": EKMapper.calendar(cal),
+                        "eventsWithinAYear": nearby,
+                        "message": "Not deleted. Deleting '\(title)' removes EVERY event in it "
+                            + "(\(nearby) within a year either side of today, more beyond) on every "
+                            + "synced device. Re-call with confirmDelete: true to proceed."
+                    ] as JSONObject
+                }
                 try ek.store.removeCalendar(cal, commit: true)
                 return ["deleted": title]
             default:

@@ -166,23 +166,8 @@ final class MCPServer {
         if let idempotencyKey, mutating,
            let cached = Idempotency.replay(key: idempotencyKey, tool: name) {
             Log.info("idempotency: replaying \(name) for key \(idempotencyKey.prefix(12))…")
-            // The replay path never enters the handler, so the guard has to run
-            // here too -- otherwise a cached body from a read-blocked folder is
-            // served precisely when nothing else is looking at it.
-            var payload = JSON.pretty(NoteGuard.filter(tool: name, args: args, value: cached))
-            // Mark it so a caller can tell a replay from a fresh write rather
-            // than concluding it somehow succeeded twice.
-            if let data = payload.data(using: .utf8),
-               var obj = (try? JSONSerialization.jsonObject(with: data)) as? JSONObject {
-                obj["replayed"] = true
-                obj["note"] = "This is the stored result of an earlier call with the same "
-                    + "idempotencyKey. No new write was performed."
-                payload = JSON.pretty(obj)
-            }
-            // Wrapped here, after the `replayed` marker is folded in, so the
-            // envelope encloses the final body rather than being re-parsed.
             respondTool(id, tool: name, args: args, caller: caller, started: started,
-                        text: payload, isError: false, send)
+                        outcome: .replayed(cached), send)
             return
         }
         // Reject unknown arguments instead of ignoring them.
@@ -194,26 +179,21 @@ final class MCPServer {
         // from that -- it has no signal anything went wrong.
         if let unknown = unknownArguments(args, for: tool) {
             respondTool(id, tool: name, args: args, caller: caller, started: started,
-                        text: "Error: \(unknown)", isError: true, send)
+                        outcome: .failure(unknown), send)
             return
         }
 
         do {
             let raw = try tool.handler(args)
-            let value = NoteGuard.filter(tool: name, args: args, value: raw)
-            // Only successes are recorded: caching a failure would make a
-            // legitimate retry-after-fix return the stale error forever.
-            if let idempotencyKey, mutating {
-                Idempotency.record(key: idempotencyKey, tool: name, result: value)
-            }
             respondTool(id, tool: name, args: args, caller: caller, started: started,
-                        text: JSON.pretty(value), isError: false, send)
+                        outcome: .result(raw),
+                        recordAs: mutating ? idempotencyKey : nil, send)
         } catch let error as ToolError {
             respondTool(id, tool: name, args: args, caller: caller, started: started,
-                        text: "Error: \(error.message)", isError: true, send)
+                        outcome: .failure(error.message), send)
         } catch {
             respondTool(id, tool: name, args: args, caller: caller, started: started,
-                        text: "Error: \(error.localizedDescription)", isError: true, send)
+                        outcome: .failure(error.localizedDescription), send)
         }
     }
 
@@ -252,24 +232,65 @@ final class MCPServer {
 
     // MARK: - Output
 
-    /// The one place a tool's text reaches a caller.
+    /// What a tool call produced, before any guard has seen it.
+    private enum ToolOutcome {
+        /// A fresh handler result.
+        case result(Any)
+        /// A stored result served for a repeated `idempotencyKey`.
+        case replayed(Any)
+        /// An error message, without the "Error: " prefix.
+        case failure(String)
+    }
+
+    /// The one place a tool's output reaches a caller, and the only place the
+    /// guards are applied.
     ///
     /// `handleToolCall` used to build a `content` block at five separate exits,
     /// and three of them -- the error paths -- bypassed `NoteGuard` entirely.
     /// That was a real leak, not a tidiness problem: an untargeted `notes_query`
     /// builds an error listing every folder name, which escaped through the
-    /// `ToolError` branch without ever meeting the guard. Routing all five
-    /// through here means a new exit added later inherits both the guard and the
-    /// envelope by construction, instead of by whoever remembers.
+    /// `ToolError` branch without ever meeting the guard. So callers hand over
+    /// the RAW outcome and every guard is applied here: `NoteGuard.filter` on
+    /// results and replays, `NoteGuard.scrubError` on failures, then the audit
+    /// record and the untrusted envelope on everything. A new exit inherits all
+    /// of them by construction, because there is no other way to respond.
     ///
-    /// Wrapping happens on the serialized string, after `JSON.pretty`, which is
-    /// also what keeps the idempotency cache clean: `Idempotency.record` stores
-    /// the pre-serialization value, so a replay re-serializes and wraps exactly
-    /// once. Wrapping the value instead would double-wrap on every replay.
+    /// Idempotency records the FILTERED value, and only for successes: caching
+    /// a failure would make a legitimate retry-after-fix return the stale error
+    /// forever. A replay is filtered again anyway, because the protected set may
+    /// have grown since it was stored. Wrapping happens on the serialized string,
+    /// so a replay re-serializes and wraps exactly once.
     private func respondTool(_ id: Any?, tool: String, args: JSONObject, caller: String?,
-                             started: Date, text: String, isError: Bool, _ send: Responder) {
-        // Audited here for the same reason the envelope is applied here: this is
-        // the one exit every tool call passes through, on both transports.
+                             started: Date, outcome: ToolOutcome, recordAs idempotencyKey: String? = nil,
+                             _ send: Responder) {
+        let text: String
+        let isError: Bool
+        switch outcome {
+        case .result(let raw):
+            let value = NoteGuard.filter(tool: tool, args: args, value: raw)
+            if let idempotencyKey {
+                Idempotency.record(key: idempotencyKey, tool: tool, result: value)
+            }
+            text = JSON.pretty(value)
+            isError = false
+        case .replayed(let cached):
+            let value = NoteGuard.filter(tool: tool, args: args, value: cached)
+            // Mark it so a caller can tell a replay from a fresh write rather
+            // than concluding it somehow succeeded twice.
+            if var obj = value as? JSONObject {
+                obj["replayed"] = true
+                obj["note"] = "This is the stored result of an earlier call with the same "
+                    + "idempotencyKey. No new write was performed."
+                text = JSON.pretty(obj)
+            } else {
+                text = JSON.pretty(value)
+            }
+            isError = false
+        case .failure(let message):
+            text = "Error: " + NoteGuard.scrubError(tool: tool, args: args, message: message)
+            isError = true
+        }
+
         AuditLog.record(tool: tool,
                         caller: caller,
                         transport: caller == nil ? "stdio" : "http",

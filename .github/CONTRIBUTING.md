@@ -46,9 +46,9 @@ Schemas use the `Schema.*` helpers with `additionalProperties: false`. Unknown a
 
 - **stdout is the JSON-RPC stream.** Diagnostics go to stderr via `Log`.
 - **Never shell out.** Notes is driven by in-process `NSAppleScript`, not `osascript` — shelling out would attribute the Automation grant to `osascript` and fragment the single-identity TCC story. The single exception is `/usr/bin/shortcuts`, spawned only from `ShortcutsTools.runCLI` with a hard deadline.
-- **Build responses only at the shared chokepoint.** The untrusted envelope and audit record attach there, and the note guard filters successful results just before it. Never put note content in an error message: errors are not filtered.
+- **Build responses only at the shared chokepoint.** Hand `respondTool` the raw outcome; the note guard (results and errors), untrusted envelope and audit record all attach there. A new exit that builds its own `content` block silently bypasses all three.
 - **One request at a time.** Handlers may assume no concurrency.
-- **Destructive tools require an explicit `confirm*` flag** (without it they refuse). Whole-calendar and whole-list deletion are the current exceptions.
+- **Destructive tools require an explicit `confirm*` flag** and otherwise return a preview (contact reachability edits refuse instead).
 
 ## Pull requests
 

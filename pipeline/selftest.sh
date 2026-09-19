@@ -102,6 +102,8 @@ cleanup() {
     ids=$(call reminders_query '{"status":"all","limit":500}' \
         | q "'\n'.join(r['id'] for r in o.get('reminders',[]) if '$PREFIX' in (r.get('title') or ''))")
     while read -r id; do [[ -n "$id" && "$id" != __* ]] && call reminders_delete "{\"id\":\"$id\",\"confirmDelete\":true}" >/dev/null; done <<< "$ids"
+    # Test lists (the delete-gate check creates one)
+    call reminders_lists "{\"action\":\"delete\",\"list\":\"$PREFIX List\",\"confirmDelete\":true}" >/dev/null
     # Contacts
     ids=$(call contacts_query "{\"search\":\"$PREFIX\",\"limit\":100}" \
         | q "'\n'.join(c['id'] for c in o.get('contacts',[]))")
@@ -366,6 +368,22 @@ if [[ -n "$EID" ]]; then
     out=$(call calendar_delete_event "{\"id\":\"$EID\"}" | q "o['deleted']")
     [[ "$out" == "False" ]] && green "calendar_delete_event previews without confirmDelete" \
                             || red "calendar_delete_event deleted without confirmation"
+fi
+
+# Deleting a whole list takes its reminders with it, so it must only preview
+# unless confirmed. Uses a throwaway list, never a real one.
+out=$(call reminders_lists "{\"action\":\"create\",\"name\":\"$PREFIX List\"}" | q "o['created']['title']")
+if [[ "$out" == __* ]]; then
+    red "could not create a throwaway list for the delete-gate check: ${out:0:70}"
+else
+    out=$(call reminders_lists "{\"action\":\"delete\",\"list\":\"$PREFIX List\"}" | q "o.get('deleted')")
+    left=$(call reminders_lists '{}' | q "sum(1 for l in o['lists'] if l['title']=='$PREFIX List')")
+    [[ "$out" == "False" && "$left" == "1" ]] && green "list delete without confirmDelete only previews" \
+                                             || red "list delete ungated: deleted=$out, remaining=$left"
+    call reminders_lists "{\"action\":\"delete\",\"list\":\"$PREFIX List\",\"confirmDelete\":true}" >/dev/null
+    left=$(call reminders_lists '{}' | q "sum(1 for l in o['lists'] if l['title']=='$PREFIX List')")
+    [[ "$left" == "0" ]] && green "list delete with confirmDelete removes it" \
+                         || red "confirmed list delete left the list behind"
 fi
 
 RID=$(call reminders_create "{\"title\":\"$PREFIX Reminder\",\"list\":\"$REMINDER_LIST\"}" | q "o['created']['id']")
