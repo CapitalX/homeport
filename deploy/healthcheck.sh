@@ -13,7 +13,7 @@
 #   ./deploy/healthcheck.sh -v       # also print what each check saw
 set -uo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || { echo "cannot enter the repo root" >&2; exit 1; }
 ROOT="$(pwd)"
 APP="$ROOT/bin/Homeport.app"
 BIN="$APP/Contents/MacOS/Homeport"

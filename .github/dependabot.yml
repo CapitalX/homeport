@@ -1,0 +1,10 @@
+# The package has no Swift dependencies, so the workflows' own actions are the
+# only thing to keep current.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015
+# Every check is `test && green "..." || red "..."`. SC2015 warns that `red` runs
+# if `green` fails; green only prints and increments a counter, so it cannot.
 #
 # End-to-end self test for the bridge, over the real Tailscale HTTPS endpoint.
 #

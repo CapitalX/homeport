@@ -1,0 +1,29 @@
+name: Privacy sweep
+
+# Runs scripts/privacy-sweep.sh: identifiers, git metadata, and -- when the
+# SWEEP_DENYLIST secret is available -- the maintainer's private vocabulary
+# list. Secrets are withheld from pull requests opened from forks, so those
+# get the first two checks and a notice; pushes to this repo get all three.
+# Findings print as file:line only, never the matched text.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the git-metadata check reads every commit and tag
+      - name: Sweep
+        env:
+          SWEEP_DENYLIST: ${{ secrets.SWEEP_DENYLIST }}
+        run: ./scripts/privacy-sweep.sh

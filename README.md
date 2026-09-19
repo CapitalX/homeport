@@ -1,6 +1,8 @@
 # 🏠 Homeport
 
-**A Model Context Protocol server for your Mac's Apple apps — Calendar, Reminders, Contacts, Notes, Messages, Voice Memos and Shortcuts — that runs headless and answers from anywhere on your private network.**
+**Your Mac's Calendar, Reminders, Contacts, Notes, Messages, Voice Memos and Shortcuts — available to your AI from any of your devices, with nothing exposed to the internet.**
+
+Homeport is a Model Context Protocol server that runs headless on a Mac and answers from anywhere on your private Tailscale network.
 
 Built on Apple's own EventKit, Contacts and Speech frameworks. No AppleScript guesswork, no Node, no Python runtime for the server, no cloud service. One code-signed Swift binary that is both the MCP server and the framework engine.
 
@@ -23,6 +25,17 @@ Homeport is different in three ways:
 - **🔌 It's a daemon, not a subprocess.** Runs under `launchd`, outlives every client, and serves over HTTP so your phone can query your Mac's calendar from another continent.
 - **🪪 It owns its own permissions.** A disclaim shim (`responsibility_spawnattrs_setdisclaim`) makes the binary its own TCC-responsible process, so grants attach to *this code* rather than to whichever app launched it. One identity, six frameworks, grants that survive rebuilds.
 - **🛡️ It assumes its inputs are hostile.** Everything it returns — a stranger's iMessage, an emailed calendar invite, a shared note — is fenced as untrusted data before a model ever sees it.
+
+## 👥 Who it's for
+
+Homeport is for people who keep their lives in Apple's apps, use an AI assistant for real work, and are comfortable in a terminal. In particular:
+
+- **You have a Mac that stays on, and you work from other devices.** An always-on Mac at home, and a Linux laptop, a Windows PC, a phone or a server-side agent that should be able to reach your calendar, reminders, contacts and notes. This is what Homeport does that stdio-only servers can't: it serves over Tailscale, with no API keys to manage and nothing on the public internet.
+- **You want your AI to actually manage your Apple apps, not just read them.** Recurrence and alarm writes, full contact editing with duplicate merging, bulk reminder cleanup, local-model routing of captured reminders into the right lists, and scheduling around your real calendar. And permissions that don't break after every rebuild.
+- **You're wary of handing an AI your messages and contacts.** Externally authored text is fenced as untrusted, sending is restricted to an allowlist, the audit log records actions but never content, Notes folders can be made write-only, and summaries can run on a local model so nothing leaves your machines.
+- **Niche, but well served:** people who record meetings or lectures on their iPhone (on-device transcription, local summaries filed into Notes); Shortcuts builders (build and sign shortcuts from code, and turn any shared iCloud link back into its actions); and developers building their own macOS MCP tools, for whom the notes on TCC, code signing and what Shortcuts really allows may be worth the read alone.
+
+**Probably not for you if** you want a one-click install (you build it and create your own signing certificate), you don't have a Mac to run it on, you want it inside a web app like claude.ai (it deliberately stays on your tailnet), or you only need "what's on my calendar" on a single Mac — a simpler stdio server will do.
 
 ---
 
@@ -429,3 +442,7 @@ MIT — see [LICENSE](LICENSE).
 ## 🙏 Credits
 
 The TCC approach — embedded `Info.plist`, disclaim shim, and `tccutil` recovery — is adapted from the MIT-licensed [`FradSer/mcp-server-apple-events`](https://github.com/FradSer/mcp-server-apple-events), which solved the permission-attribution problem first.
+
+---
+
+Built by Xavier Enahoro · [XTech Solutions](https://xtechsolutions.co)

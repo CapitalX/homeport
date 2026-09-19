@@ -1,0 +1,35 @@
+name: CodeQL
+
+# Static security analysis of the Swift sources. Code scanning is free for
+# public repositories; on a private one it needs GitHub Advanced Security, so
+# the job is skipped until the repository is public rather than failing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'   # weekly, so new CodeQL queries run against unchanged code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: ${{ !github.event.repository.private }}
+    runs-on: macos-26   # the macOS 26 SDK is required to compile (see ci.yml)
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+          build-mode: manual
+      - name: Build
+        run: swift build
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:swift

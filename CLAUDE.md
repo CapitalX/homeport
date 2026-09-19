@@ -11,13 +11,14 @@ A single self-contained Swift binary that is **both** an MCP server and the Even
 ```bash
 ./build.sh release            # build + embed Info.plist + assemble .app + sign  (the ONLY supported build)
 ./build.sh debug              # same pipeline, debug config
-swift test                    # unit tests (pure functions; no TCC grant needed)
+swift test                    # unit tests (no TCC grant needed)
 swift test --filter UntrustedTests/testEveryRegisteredToolIsClassified   # one test
 ./deploy/healthcheck.sh       # verify the whole deployment ON THIS HOST (run after a rebuild, reboot or OS update)
 BRIDGE_ENDPOINT=https://<bridge-host>.<tailnet>.ts.net/mcp ./pipeline/selftest.sh   # end-to-end — RUN FROM ANOTHER TAILNET NODE (prints its own totals)
 BRIDGE_ENDPOINT=... ./pipeline/selftest.sh --write   # also exercises create/update/delete
 ./deploy/install-bridge.sh    # (re)install the LaunchAgent pointing at bin/…/Homeport
 ./pipeline/add-device.sh <node> [read,write,message]   # enroll a tailnet device in policy.json
+./scripts/privacy-sweep.sh    # the pre-publication sweep below; also the pre-push hook and a CI job
 ```
 
 `selftest.sh` cannot test the host it runs on. `tailscale serve` stamps
@@ -213,6 +214,22 @@ Full Disk Access is the exception: there is no API for granting it, only `tccuti
 Anything that could carry details of a real deployment must clear **three**
 sweeps, not one. The third is the one that gets missed, which is why it is
 written down.
+
+`scripts/privacy-sweep.sh` automates all three, and runs in CI on every push
+and pull request (`.github/workflows/privacy.yml`). Install it locally as a
+pre-push hook, because CI runs *after* the push — on a public repo that is
+already too late:
+
+```bash
+ln -s ../../scripts/privacy-sweep.sh .git/hooks/pre-push
+```
+
+The vocabulary list is private by nature, so it is never committed: the
+script reads `~/.config/homeport/sweep-denylist.txt` locally and the
+`SWEEP_DENYLIST` Actions secret in CI (one term per line, whole-word,
+case-insensitive), and prints findings as `file:line` only. The script is a
+floor, not the whole check: a denylist only knows words someone thought to
+add, so still *read* anything ported in, as below.
 
 ### 1. Identifiers
 

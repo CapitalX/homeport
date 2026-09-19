@@ -19,7 +19,7 @@ jobs:
     # but they cannot make the symbols compile against an older SDK.
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Show toolchain
         run: |
           xcodebuild -version
@@ -28,3 +28,20 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+      - name: A stock build knows nothing about anyone
+        # The debug binary with no config must expose no voice-memo categories.
+        # See CLAUDE.md § "Verify a stock build knows nothing".
+        run: |
+          got=$(printf '%s\n%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            | HOMEPORT_NO_DISCLAIM=1 HOMEPORT_RAW=1 ./.build/debug/Homeport 2>/dev/null \
+            | python3 -c 'import json,sys
+          for l in sys.stdin:
+              if l.startswith("{"):
+                  m=json.loads(l)
+                  if m.get("id")==2:
+                      t=[t for t in m["result"]["tools"] if t["name"]=="voicememos_list"][0]
+                      print(t["inputSchema"]["properties"]["category"]["enum"])')
+          echo "categories: $got"
+          test "$got" = "['unknown']"
