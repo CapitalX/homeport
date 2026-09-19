@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Homeport topology",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1200,
+      680
+    ],
+    "views": [
+      {
+        "id": "remote-call",
+        "label": "A call from another device",
+        "focus": [
+          "devices",
+          "serve",
+          "listener",
+          "server"
+        ],
+        "note": "WireGuard to the Mac, identity from tailscale serve, scopes from policy.json, then dispatch."
+      },
+      {
+        "id": "on-the-way-out",
+        "label": "Every response is guarded",
+        "focus": [
+          "server",
+          "respond",
+          "serve"
+        ],
+        "note": "Results, replays and errors all leave through respondTool: note guard, audit record, untrusted envelope."
+      },
+      {
+        "id": "apple-apps",
+        "label": "The Apple apps",
+        "focus": [
+          "server",
+          "eventkit",
+          "contacts",
+          "notes",
+          "messages",
+          "media"
+        ],
+        "note": "One signed binary owns every macOS privacy grant."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "devices",
+      "type": "external",
+      "label": "Your devices",
+      "sublabel": "iOS · Android · laptop · agent",
+      "pos": [
+        40,
+        280
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "serve",
+      "type": "security",
+      "label": "tailscale serve",
+      "sublabel": "HTTPS · identity headers",
+      "pos": [
+        260,
+        280
+      ],
+      "size": [
+        150,
+        76
+      ]
+    },
+    {
+      "id": "listener",
+      "type": "security",
+      "label": "Loopback listener",
+      "sublabel": "127.0.0.1 · policy.json scopes",
+      "pos": [
+        470,
+        280
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "server",
+      "type": "backend",
+      "label": "MCPServer",
+      "sublabel": "39 tools · one serial queue",
+      "pos": [
+        710,
+        280
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "respond",
+      "type": "security",
+      "label": "respondTool",
+      "sublabel": "note guard · audit · envelope",
+      "pos": [
+        710,
+        80
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "local",
+      "type": "external",
+      "label": "Local MCP client",
+      "sublabel": "same Mac · stdio",
+      "pos": [
+        470,
+        500
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "eventkit",
+      "type": "database",
+      "label": "EventKit",
+      "sublabel": "Calendar · Reminders",
+      "pos": [
+        980,
+        40
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "contacts",
+      "type": "database",
+      "label": "Contacts",
+      "sublabel": "CNContactStore",
+      "pos": [
+        980,
+        150
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "notes",
+      "type": "database",
+      "label": "Notes",
+      "sublabel": "in-process Apple Events",
+      "pos": [
+        980,
+        260
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "messages",
+      "type": "database",
+      "label": "Messages",
+      "sublabel": "chat.db copy · send allowlist",
+      "pos": [
+        980,
+        370
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "media",
+      "type": "database",
+      "label": "Voice Memos · Shortcuts",
+      "sublabel": "on-device Speech · shortcuts CLI",
+      "pos": [
+        980,
+        480
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "Local model",
+      "sublabel": "OpenAI-compatible · optional",
+      "pos": [
+        980,
+        600
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Your always-on Mac",
+      "wraps": [
+        "serve",
+        "listener",
+        "server",
+        "respond",
+        "local",
+        "eventkit",
+        "contacts",
+        "notes",
+        "messages",
+        "media"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "127.0.0.1 only",
+      "wraps": [
+        "listener"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "tailnet",
+      "from": "devices",
+      "to": "serve",
+      "label": "WireGuard",
+      "variant": "emphasis"
+    },
+    {
+      "id": "proxied",
+      "from": "serve",
+      "to": "listener",
+      "label": "identity",
+      "variant": "security"
+    },
+    {
+      "id": "authorized",
+      "from": "listener",
+      "to": "server",
+      "label": "in scope"
+    },
+    {
+      "id": "stdio",
+      "from": "local",
+      "to": "server",
+      "label": "stdio",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "to-eventkit",
+      "from": "server",
+      "to": "eventkit"
+    },
+    {
+      "id": "to-contacts",
+      "from": "server",
+      "to": "contacts"
+    },
+    {
+      "id": "to-notes",
+      "from": "server",
+      "to": "notes"
+    },
+    {
+      "id": "to-messages",
+      "from": "server",
+      "to": "messages"
+    },
+    {
+      "id": "to-media",
+      "from": "server",
+      "to": "media"
+    },
+    {
+      "id": "to-llm",
+      "from": "server",
+      "to": "llm",
+      "label": "route · summarize",
+      "variant": "dashed",
+      "labelDy": 70
+    },
+    {
+      "id": "outbound",
+      "from": "server",
+      "to": "respond",
+      "label": "result or error",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "response",
+      "from": "respond",
+      "to": "serve",
+      "label": "response",
+      "fromSide": "left",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Reach",
+      "items": [
+        "Any device on your tailnet, over WireGuard",
+        "Nothing on the public internet, no API keys",
+        "Local clients speak stdio and skip the network"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Guards",
+      "items": [
+        "Identity from tailscale serve, scopes from policy.json",
+        "Every result and error leaves through respondTool",
+        "Messages only go to handles you enrolled"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Stays on your Mac",
+      "items": [
+        "One signed binary owns every privacy grant",
+        "Speech runs on-device",
+        "Summaries use a local model, if you add one"
+      ]
+    }
+  ]
+}

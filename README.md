@@ -6,16 +6,11 @@ Homeport is a Model Context Protocol server that runs headless on a Mac and answ
 
 Built on Apple's own EventKit, Contacts and Speech frameworks. No AppleScript guesswork, no Node, no Python runtime for the server, no cloud service. One code-signed Swift binary that is both the MCP server and the framework engine.
 
-```
-┌──────────────┐     Tailscale (WireGuard)      ┌────────────────────────┐
-│  iPhone      |                                |                        |
-|  Android     │ ──────────────────────────────▶│  Homeport (your Mac)   │
-│  Laptop      │        HTTPS + identity        │  ├─ EventKit           │
-│  Desktop     │                                │  ├─ Contacts           │
-└──────────────┘                                │  ├─ Notes (AppleEvents)│
-                                                │  └─ Speech / Messages  │
-                                                └────────────────────────┘
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="Homeport topology: your devices reach tailscale serve on an always-on Mac over WireGuard; a loopback listener checks identity and policy.json scopes; MCPServer dispatches to EventKit, Contacts, Notes, Messages, Voice Memos and Shortcuts; every result and error leaves through respondTool. A local MCP client can connect over stdio, and an optional local model handles routing and summaries." width="100%">
+</p>
+
+<p align="center"><a href="https://capitalx.github.io/homeport/architecture.html"><b>Open the interactive diagram →</b></a> guided views, relationship tracing, search, light and dark</p>
 
 ## Why another Apple MCP server?
 

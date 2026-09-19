@@ -19,3 +19,6 @@ deploy/signing-identity.pin
 # shipped starting point; the real one lives in Application Support.
 categories.json
 
+
+# archify visual-check evidence (local paths; regenerate with archify visual-check)
+docs/*.visual-check.*
