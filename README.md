@@ -439,6 +439,8 @@ MIT — see [LICENSE](LICENSE).
 
 The TCC approach — embedded `Info.plist`, disclaim shim, and `tccutil` recovery — is adapted from the MIT-licensed [`FradSer/mcp-server-apple-events`](https://github.com/FradSer/mcp-server-apple-events), which solved the permission-attribution problem first.
 
+The topology diagram was made with [Archify](https://github.com/tt-a1i/archify) (MIT). It and the JetBrains Mono font it embeds are covered in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ---
 
 Built by Xavier Enahoro · [XTech Solutions](https://xtechsolutions.co)
