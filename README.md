@@ -51,7 +51,8 @@ sudo ./deploy/install-signing-identity.sh   # one-time: creates a local signing 
 Grant permissions — this opens real macOS prompts, so approve each one:
 
 ```bash
-open -a bin/Homeport.app --args --grant
+open -a "/path/to/bin/Homeport.app" --args --grant
+
 ```
 
 **Full Disk Access must be added by hand.** macOS provides no API to grant it — only to reset it. Go to **System Settings → Privacy & Security → Full Disk Access**, click **+**, and add `bin/Homeport.app`. This is required only for Messages and Voice Memos; the other four work without it.
