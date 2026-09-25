@@ -1,4 +1,4 @@
-# 🏠 Homeport
+# 🏠 Homeport - An Apple MCP Server
 
 **Your Mac's Calendar, Reminders, Contacts, Notes, Messages, Voice Memos and Shortcuts — available to your AI from any of your devices, with nothing exposed to the internet.**
 
