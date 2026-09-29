@@ -10,6 +10,16 @@ enum VoiceMemoTools {
         return f
     }()
 
+    /// Appended to the descriptions of the two tools that need the on-device
+    /// engine. A build without it still advertises them — a tool that vanishes
+    /// from `tools/list` looks like a server mismatch — so the description has
+    /// to say so, or a model will keep calling something that can only fail.
+    private static let onDeviceNote: String = LocalTranscriber.isAvailable ? "" : """
+        \n\nNOTE: on-device transcription is NOT available on this bridge, so Mac-recorded .m4a files can only \
+        be read from cache — bridge_ping reports the reason. Recordings made on an iPhone carry their own \
+        transcript and are unaffected.
+        """
+
     private static func summary(_ memo: VoiceMemo, classification: Classification?) -> JSONObject {
         var out: JSONObject = [
             "id": memo.uniqueId,
@@ -101,7 +111,7 @@ enum VoiceMemoTools {
         Return the transcript of one recording. iPhone-recorded .qta files carry a transcript Apple generated \
         on-device; Mac-recorded .m4a files are transcribed locally on first request and cached thereafter. \
         Nothing is ever sent off this machine. Set `segments` to true for word-level timings.
-        """,
+        """ + onDeviceNote,
         inputSchema: Schema.object([
             "id": Schema.string("Recording id or filename from voicememos_list"),
             "segments": Schema.boolean("Include word-level timings (default false)"),
@@ -159,7 +169,7 @@ enum VoiceMemoTools {
         name: "voicememos_transcribe",
         description: """
         Transcribe a recording on this Mac using Apple's on-device speech model, and cache the result.         Audio never leaves the machine. Use this to pre-warm Mac-recorded .m4a files (roughly 60x realtime,         so an hour-long recording takes about a minute); voicememos_transcript calls it automatically when needed.
-        """,
+        """ + onDeviceNote,
         inputSchema: Schema.object([
             "id": Schema.string("Recording id or filename from voicememos_list"),
             "force": Schema.boolean("Re-transcribe even if a cached transcript exists (default false)")

@@ -1,6 +1,8 @@
 import AVFoundation
 import Foundation
+#if SPEECH_ANALYZER
 import Speech
+#endif
 
 /// On-device transcription for recordings that carry no embedded transcript —
 /// in practice the `.m4a` files Voice Memos writes on a Mac.
@@ -11,6 +13,12 @@ import Speech
 /// download, transcription needs no network at all. That property is the whole
 /// reason this exists rather than a cloud speech API — confidential recordings
 /// must not leave the machine.
+///
+/// The engine is **optional**, and compiled in only when the build SDK has it
+/// (see `Package.swift`). Nothing else in the binary depends on it: cached
+/// transcripts still read back, `EmbeddedTranscript` still reads the transcript
+/// iOS wrote into a `.qta`, and the two tools that need the engine return
+/// `availability` as their error rather than failing to exist.
 enum LocalTranscriber {
 
     /// Results are cached next to the bridge's own support files so a long
@@ -47,19 +55,57 @@ enum LocalTranscriber {
         try? JSON.line(payload).write(to: cacheURL(for: audio))
     }
 
+    // MARK: - Availability
+
+    /// Whether this binary can transcribe on this Mac right now.
+    ///
+    /// Two independent reasons it may be false, and a caller deserves to know
+    /// which: the engine was not compiled in (built against an SDK older than
+    /// macOS 26), or it was but this Mac is running an older macOS.
+    static var isAvailable: Bool {
+        #if SPEECH_ANALYZER
+        if #available(macOS 26.0, *) { return true } else { return false }
+        #else
+        return false
+        #endif
+    }
+
+    /// One line for `bridge_ping` and for the error a caller gets, in the same
+    /// "ok" / "unavailable: why" shape as the other capabilities.
+    static var availability: String {
+        #if SPEECH_ANALYZER
+        if #available(macOS 26.0, *) { return "ok" }
+        return "unavailable: needs macOS 26 or later (this Mac runs "
+            + ProcessInfo.processInfo.operatingSystemVersionString + ")"
+        #else
+        return "unavailable: not compiled into this build — SpeechAnalyzer needs the macOS 26 SDK "
+            + "and this binary was built against an older one. Rebuild with Xcode 26 or later to enable it. "
+            + "Everything else, including transcripts embedded in iPhone .qta recordings, is unaffected."
+        #endif
+    }
+
     // MARK: - Entry point
 
     /// Transcribes `audio`, returning a cached result when one exists.
     ///
+    /// Throws a plain `ToolError` naming the reason when the engine is not
+    /// available, so a build without it degrades to one failing tool call
+    /// rather than to a binary that would not compile.
+    static func transcribe(_ audio: URL, force: Bool = false) throws -> Transcript {
+        if !force, let hit = cached(for: audio) { return hit }
+        let transcript = try engine(audio)
+        store(transcript, for: audio)
+        return transcript
+    }
+
+#if SPEECH_ANALYZER
+
     /// The MCP server handles one request at a time on the main thread and tool
     /// handlers are synchronous, so this blocks on a semaphore while the async
     /// Speech work runs. Nothing in `SpeechAnalyzer` requires the main actor,
     /// so there is no deadlock risk.
-    static func transcribe(_ audio: URL, force: Bool = false) throws -> Transcript {
-        if !force, let hit = cached(for: audio) { return hit }
-        guard #available(macOS 26.0, *) else {
-            throw ToolError("On-device transcription needs macOS 26 or later (this Mac is running an older version).")
-        }
+    private static func engine(_ audio: URL) throws -> Transcript {
+        guard #available(macOS 26.0, *) else { throw ToolError(availability) }
 
         var outcome: Result<Transcript, Error>?
         let done = DispatchSemaphore(value: 0)
@@ -71,9 +117,7 @@ enum LocalTranscriber {
         done.wait()
 
         guard let outcome else { throw ToolError("Transcription finished without producing a result.") }
-        let transcript = try outcome.get()
-        store(transcript, for: audio)
-        return transcript
+        return try outcome.get()
     }
 
     @available(macOS 26.0, *)
@@ -126,4 +170,14 @@ enum LocalTranscriber {
         }
         return Transcript(text: trimmed, source: .onDevice, segments: segments)
     }
+
+#else
+
+    /// Built against an SDK without SpeechAnalyzer. The tool still exists and
+    /// still answers — it just answers with the reason.
+    private static func engine(_ audio: URL) throws -> Transcript {
+        throw ToolError("Cannot transcribe \(audio.lastPathComponent): " + availability)
+    }
+
+#endif
 }

@@ -37,7 +37,7 @@ Homeport is for people who keep their lives in Apple's apps, use an AI assistant
 
 ## 🚀 Quick Start
 
-**Requirements:** macOS 14+ to run (26+ for on-device transcription); Xcode 26 or later, or its command line tools, to build — the transcriber needs the macOS 26 SDK even though the binary runs on 14; and an admin account.
+**Requirements:** macOS 14+ to run, Xcode command line tools to build, and an admin account. On-device transcription is the one optional piece: it needs macOS 26+ to run and the macOS 26 SDK to compile, and a build on an older SDK simply leaves it out — everything else builds and works, and `bridge_ping` says so.
 
 ```bash
 git clone https://github.com/CapitalX/homeport.git
@@ -99,7 +99,7 @@ Read iMessage and SMS history — decoding tapbacks, group chat names, participa
 Build and sign a shortcut from an action list, read any public iCloud share link back into an action list, list your library, and run a shortcut. See [Shortcuts](#-shortcuts-1) for what macOS does and does not allow.
 
 ### 🎙️ Voice Memos
-Reads the recordings library **read-only**, copying the Core Data store to a temp directory rather than opening it in place. iPhone recordings carry a transcript iOS generated on-device — Homeport parses it out of the QuickTime metadata atom, with word-level timings. Mac recordings have no embedded transcript and are transcribed locally with `SpeechAnalyzer` at roughly 60× realtime. **Audio never leaves the machine.**
+Reads the recordings library **read-only**, copying the Core Data store to a temp directory rather than opening it in place. iPhone recordings carry a transcript iOS generated on-device — Homeport parses it out of the QuickTime metadata atom, with word-level timings. Mac recordings have no embedded transcript and are transcribed locally with `SpeechAnalyzer` at roughly 60× realtime (compiled in only when the build SDK has it; without it those two tools return the reason and the rest is unaffected). **Audio never leaves the machine.**
 
 Optional summarization runs against any OpenAI-compatible local model (LM Studio, Ollama, llama.cpp).
 

@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## What this is
 
@@ -61,7 +61,7 @@ certificate and all of them stop matching at once. Four consequences, all enforc
 
 ### Startup (`main.swift`)
 
-Three ordered steps, and the order is load-bearing: `--grant` bootstrap (must precede the re-exec — a disclaimed process has no GUI session and macOS will not prompt it) → `Disclaim.reexecIfNeeded()` (re-exec self via `responsibility_spawnattrs_setdisclaim` so the TCC grant attaches to *this* binary rather than to Claude Desktop/Code) → serve.
+Three ordered steps, and the order is load-bearing: `--grant` bootstrap (must precede the re-exec — a disclaimed process has no GUI session and macOS will not prompt it) → `Disclaim.reexecIfNeeded()` (re-exec self via `responsibility_spawnattrs_setdisclaim` so the TCC grant attaches to *this* binary rather than to Codex Desktop/Code) → serve.
 
 ### Transport selection
 

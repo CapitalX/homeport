@@ -21,7 +21,7 @@ enum DiagnosticTools {
         description: """
         Health check. No side effects, no writes. Returns server version, tool count, and the \\
         live authorization status of each capability (calendar, reminders, contacts, notes, \\
-        messages, voicememos) so a failure can be attributed to a missing grant rather than to \\
+        messages, voicememos, transcription) so a failure can be attributed to a missing grant rather than to \\
         bad arguments or an unreachable Mac. Set `warm` true to also pre-launch the Notes \\
         AppleScript path — the first Notes call after a daemon restart takes ~50s while Notes.app \\
         launches, and warming it here keeps that cost off a real request.
@@ -62,6 +62,11 @@ enum DiagnosticTools {
             // The only capability that depends on something outside this Mac.
             // Reported here so "why did summarize hang" is one call to answer.
             capabilities["localModel"] = LocalLLM.reachabilitySummary()
+
+            // Optional and decided at BUILD time, not by a grant -- so a caller
+            // that gets "cannot transcribe" can tell a missing engine from a
+            // missing permission without guessing.
+            capabilities["transcription"] = LocalTranscriber.availability
 
             return [
                 "ok": true,
