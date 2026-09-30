@@ -184,6 +184,7 @@ the full account; the findings that will bite someone editing this file (measure
 | Path | What |
 |---|---|
 | `~/Library/Application Support/homeport/policy.json` | allowed users, enrolled nodes + scopes, `readBlockedNoteFolders`, `allowedRecipients`. Policy, not credentials. Missing/malformed ⇒ reject everything. |
+| `~/Library/Application Support/homeport/places.json` | optional saved places for location alarms: name → `{title?, latitude, longitude, radius?}`. Personal; never commit one. Missing ⇒ every place goes to the map search; malformed ⇒ place lookups error |
 | `~/Library/Application Support/homeport/voicememo-watch.py` | the *installed* copy of the watcher (`pipeline/install.sh` copies it; launchd cannot read the repo copy under some TCC-protected paths) |
 | `~/Library/Application Support/homeport/schedule.json` | `reminders_schedule` policy: hours, work-flag/protected/day-off calendars, list sets. Absent ⇒ neutral stock defaults. Never tracked; `deploy/schedule.example.json` shows every key |
 | `~/Library/Application Support/homeport/shortcuts/` | the Shortcuts outbox: signed `.shortcut`, unsigned `.wflow`, per-build `<slug>.json` manifest, and `fetched-<id>.*` saves. The only place the Shortcuts tools write |

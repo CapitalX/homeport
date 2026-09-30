@@ -102,7 +102,7 @@ enum DiagnosticTools {
 /// Version surface, so a client can detect a server change rather than
 /// discovering it by diffing response shapes.
 enum Version {
-    static let current = "1.8.0"
+    static let current = "1.9.0"
     /// Bump whenever a response SHAPE changes in a way a client could notice:
     /// a new field, a renamed key, a different truncation contract.
     static let payload = 4

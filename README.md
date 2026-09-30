@@ -139,7 +139,7 @@ bridge.
 | Tool | Description |
 |---|---|
 | `reminders_query` | Search by list, status, due range, or text |
-| `reminders_create` | Create with due date, priority, recurrence, alarms |
+| `reminders_create` | Create with due date, priority, recurrence, alarms (at a time, or on arriving at or leaving a place) |
 | `reminders_update` | Update any field; `clearDue` removes a due date |
 | `reminders_complete` | Mark complete or incomplete |
 | `reminders_delete` | Delete by id; requires `confirmDelete` |
@@ -267,6 +267,8 @@ Safety properties (path and host confinement are covered by tests):
 
 Recurrence object: `{ "frequency": "daily|weekly|monthly|yearly", "interval": 1, "until": "2026-12-31", "daysOfWeek": ["MO","WE"], "daysOfMonth": [1,15], "monthsOfYear": [3], "setPositions": [-1] }` — supply **only one** end specifier (`until` OR `count`, e.g. `"count": 10` in place of `until`); a date-only `until` is inclusive of that whole day. Unknown recurrence fields are rejected with an error rather than silently dropped, and create/update echo back the full stored rule (with `until`/`count`/`daysOfWeek` and an `unbounded` flag). To bound an existing runaway series, `calendar_update_event` with a `recurrence` that has `until`/`count`. To trim/split a series at a date, pass `occurrenceDate` (an actual occurrence's date) with `span:"futureEvents"` to `calendar_update_event`/`calendar_delete_event`. (Legacy `end:{count|date}` is still accepted.)
 Alarm object: `{ "relativeOffset": -900 }` (seconds before due/start; negative = before) or `{ "absoluteDate": "2026-08-06T09:00:00Z" }`
+
+Reminders also take a **location alarm**, which fires on the phone when you arrive at or leave a place: `{ "location": "Eiffel Tower, Paris", "proximity": "arrive" }` or, with coordinates, `{ "location": { "title": "Office", "latitude": 48.8584, "longitude": 2.2945, "radius": 150 }, "proximity": "leave" }`. `proximity` defaults to `arrive`; `radius` is metres (default 100). Place text is resolved on the host: first against `~/Library/Application Support/homeport/places.json` (`{"home": {"latitude": .., "longitude": .., "radius": 150}}`, matched ignoring case and punctuation; personal, never committed), then by an Apple Maps search. If the text matches more than one place, nothing is written and the candidates come back with coordinates to retry with. The host needs no Location Services grant, because the phone does the geofencing. An alarm entry with an unknown or unparsable field is now an error on events and reminders alike, where it used to be skipped.
 
 ---
 

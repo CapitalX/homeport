@@ -365,8 +365,9 @@ enum CalendarTools {
             event.recurrenceRules = [try Recurrence.rule(from: recurrence)]
         }
         if let alarmArray = args.array("alarms") {
+            let alarms = try Alarms.build(from: alarmArray)
             event.alarms = nil
-            for alarm in Alarms.build(from: alarmArray) { event.addAlarm(alarm) }
+            for alarm in alarms { event.addAlarm(alarm) }
         }
     }
 }

@@ -20,6 +20,10 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("EventKit"),
                 .linkedFramework("Contacts"),
+                // Place search for location alarms on reminders (no Location
+                // Services grant: the phone does the geofencing).
+                .linkedFramework("MapKit"),
+                .linkedFramework("CoreLocation"),
                 // Notes has no EventKit equivalent; it is driven over Apple
                 // Events via NSAppleScript (Foundation), which needs no extra
                 // framework. AVFoundation + libsqlite3 back the Voice Memos

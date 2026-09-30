@@ -303,13 +303,54 @@ enum Recurrence {
 // MARK: - Alarms
 
 enum Alarms {
-    static func build(from array: [Any]) -> [EKAlarm] {
+    static let fields: Set<String> = ["relativeOffset", "absoluteDate", "location", "proximity"]
+    private static let kinds = ["relativeOffset", "absoluteDate", "location"]
+
+    /// Parse an `alarms` array. An entry that cannot be understood is an error:
+    /// this used to skip such entries, so a misspelled key produced a reminder
+    /// with no alarm and a success response. Alarms are nested objects, which
+    /// `MCPServer.unknownArguments` cannot see into, so the check lives here.
+    ///
+    /// `allowLocation` is true for reminders only. `resolve` turns place text
+    /// into coordinates (saved places, then a map search); tests inject it.
+    static func build(from array: [Any], allowLocation: Bool = false,
+                      resolve: LocationAlarms.Resolver = Places.resolve) throws -> [EKAlarm] {
         var alarms: [EKAlarm] = []
-        for case let entry as JSONObject in array {
-            if let offset = entry.double("relativeOffset") {
+        for (index, raw) in array.enumerated() {
+            guard let entry = raw as? JSONObject else {
+                throw ToolError("alarm[\(index)] must be an object.")
+            }
+            let unknown = entry.keys.filter { !fields.contains($0) }.sorted()
+            guard unknown.isEmpty else {
+                throw ToolError("alarm[\(index)]: unknown field(s) \(unknown.joined(separator: ", ")). "
+                    + "Accepted: \(fields.sorted().joined(separator: ", ")).")
+            }
+            let present = kinds.filter { entry[$0] != nil }
+            guard present.count == 1, let kind = present.first else {
+                throw ToolError("alarm[\(index)] needs only one of relativeOffset, absoluteDate or location"
+                    + (present.isEmpty ? "." : " (got \(present.joined(separator: ", ")))."))
+            }
+            if entry["proximity"] != nil && kind != "location" {
+                throw ToolError("alarm[\(index)]: proximity only applies to a location alarm.")
+            }
+            switch kind {
+            case "relativeOffset":
+                guard let offset = entry.double("relativeOffset") else {
+                    throw ToolError("alarm[\(index)]: relativeOffset must be a number of seconds.")
+                }
                 alarms.append(EKAlarm(relativeOffset: offset))
-            } else if let dateStr = entry.string("absoluteDate"), let date = DateParse.date(dateStr) {
+            case "absoluteDate":
+                guard let dateStr = entry.string("absoluteDate"), let date = DateParse.date(dateStr) else {
+                    throw ToolError("alarm[\(index)]: could not parse absoluteDate.")
+                }
                 alarms.append(EKAlarm(absoluteDate: date))
+            default:
+                guard allowLocation else {
+                    throw ToolError("alarm[\(index)]: location alarms are only supported on reminders.")
+                }
+                let proximity = try LocationAlarms.proximity(from: entry, at: index)
+                let place = try LocationAlarms.place(from: entry, at: index, resolve: resolve)
+                alarms.append(LocationAlarms.alarm(at: place, proximity: proximity))
             }
         }
         return alarms
@@ -317,6 +358,7 @@ enum Alarms {
 
     static func json(_ alarms: [EKAlarm]) -> [JSONObject] {
         alarms.map { alarm in
+            if let location = LocationAlarms.json(alarm) { return location }
             if let date = alarm.absoluteDate {
                 return ["absoluteDate": DateParse.isoString(date)]
             }
@@ -519,16 +561,18 @@ enum EKMapper {
 /// one -- the same failure class as contacts_update assigning whole arrays.
 /// `setAlarms` still replaces, but only behind confirmReplace.
 ///
-/// Alarms are matched by relative offset (or absolute date): EKAlarm has no
-/// stable identity to compare on.
+/// Alarms are matched by relative offset, absolute date, or place and
+/// direction: EKAlarm has no stable identity to compare on.
 enum AlarmEdits {
     static func signature(_ alarm: EKAlarm) -> String {
+        if let location = LocationAlarms.signature(alarm) { return location }
         if let absolute = alarm.absoluteDate { return "abs:\(absolute.timeIntervalSince1970)" }
         return "rel:\(alarm.relativeOffset)"
     }
 
     /// Works for any EKCalendarItem, so events and reminders share one path.
     static func apply(to item: EKCalendarItem, _ args: JSONObject) throws {
+        let allowLocation = item is EKReminder
         if let set = args.array("setAlarms") {
             guard args.bool("confirmReplace") == true else {
                 throw ToolError(
@@ -536,8 +580,9 @@ enum AlarmEdits {
                     + "is intended, or use `addAlarms` / `removeAlarms` to change individual "
                     + "alarms without touching the others.")
             }
+            let replacement = try Alarms.build(from: set, allowLocation: allowLocation)
             item.alarms = nil
-            for alarm in Alarms.build(from: set) { item.addAlarm(alarm) }
+            for alarm in replacement { item.addAlarm(alarm) }
             return
         }
 
@@ -545,12 +590,13 @@ enum AlarmEdits {
         var current = item.alarms ?? []
 
         if let remove = args.array("removeAlarms") {
-            let targets = Set(Alarms.build(from: remove).map(signature))
+            let targets = Set(try Alarms.build(from: remove, allowLocation: allowLocation).map(signature))
             current.removeAll { targets.contains(signature($0)) }
         }
         if let add = args.array("addAlarms") {
             let existing = Set(current.map(signature))
-            for alarm in Alarms.build(from: add) where !existing.contains(signature(alarm)) {
+            for alarm in try Alarms.build(from: add, allowLocation: allowLocation)
+            where !existing.contains(signature(alarm)) {
                 current.append(alarm)
             }
         }

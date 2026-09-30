@@ -7,6 +7,13 @@ if CommandLine.arguments.contains("--grant") {
     PermissionGrant.run() // never returns
 }
 
+// Place lookup for location alarms, run as a child of the daemon (see
+// Places.search for why). Touches no TCC-protected data, so it needs neither
+// the disclaim re-exec nor a transport.
+if CommandLine.arguments.contains(Places.searchFlag) {
+    Places.runSearchHelper(arguments: CommandLine.arguments) // never returns
+}
+
 // STEP 1: Disclaim TCC responsibility BEFORE touching EventKit/Contacts, so the
 // permission grant attaches to this binary rather than the launching app.
 Disclaim.reexecIfNeeded()

@@ -289,7 +289,7 @@ enum ReminderTools {
 
     private static let createTool = Tool(
         name: "reminders_create",
-        description: "Create a reminder. `title` required. Optional: `list`/`listId` (defaults to the default list), `notes`, `due` (ISO or yyyy-MM-dd; add a time for a timed reminder), `priority` (none|high|medium|low), `url`, `recurrence` object, `alarms` array. Recurrence: {frequency:daily|weekly|monthly|yearly, interval, until:\"ISO/yyyy-MM-dd\" (end date) OR count:N (occurrences) — not both, daysOfWeek:[MO,TU...], daysOfMonth:[..]}. Unknown recurrence fields error out rather than being dropped. Alarms: [{relativeOffset seconds, negative = before due}] or [{absoluteDate ISO}].",
+        description: "Create a reminder. `title` required. Optional: `list`/`listId` (defaults to the default list), `notes`, `due` (ISO or yyyy-MM-dd; add a time for a timed reminder), `priority` (none|high|medium|low), `url`, `recurrence` object, `alarms` array. Recurrence: {frequency:daily|weekly|monthly|yearly, interval, until:\"ISO/yyyy-MM-dd\" (end date) OR count:N (occurrences) — not both, daysOfWeek:[MO,TU...], daysOfMonth:[..]}. Unknown recurrence fields error out rather than being dropped. Alarms: [{relativeOffset seconds, negative = before due}] or [{absoluteDate ISO}] or a place, which fires on the phone: [{location: \"place name or address\" | {title, latitude, longitude, radius? metres}, proximity: arrive (default) | leave}]. Place text is looked up (saved places first, then a map search); if it matches more than one place nothing is created and the candidates are returned to retry with coordinates.",
         inputSchema: Schema.object([
             "title": Schema.string("Reminder title"),
             "list": Schema.string("Target list name"),
@@ -499,7 +499,7 @@ enum ReminderTools {
 
     private static let updateTool = Tool(
         name: "reminders_update",
-        description: "Update a reminder by `id`. Provide any of: `title`, `notes`, `due` (or set `clearDue`:true), `priority`, `url`, `list`/`listId` (move it), `recurrence` (or `clearRecurrence`:true), `alarms` (replaces all; or `clearAlarms`:true), `completed`.",
+        description: "Update a reminder by `id`. Provide any of: `title`, `notes`, `due` (or set `clearDue`:true), `priority`, `url`, `list`/`listId` (move it), `recurrence` (or `clearRecurrence`:true), `alarms` (replaces all; or `clearAlarms`:true), `completed`. Alarm shapes are the same as reminders_create, including {location, proximity: arrive|leave}; use `addAlarms` to add a place trigger without touching the others.",
         inputSchema: Schema.object([
             "id": Schema.string("Reminder id (calendarItemIdentifier)"),
             "title": Schema.string("New title"),
@@ -513,9 +513,9 @@ enum ReminderTools {
             "recurrence": Schema.freeObject("New recurrence rule"),
             "clearRecurrence": Schema.boolean("Remove recurrence"),
             "alarms": Schema.array("Replacement alarms", items: Schema.freeObject("Alarm")),
-            "addAlarms": Schema.array("Alarms to ADD, e.g. [{relativeOffset:-600}]", items: Schema.freeObject("{relativeOffset}|{absoluteDate}")),
-            "removeAlarms": Schema.array("Alarms to REMOVE (matched by offset/date)", items: Schema.freeObject("{relativeOffset}|{absoluteDate}")),
-            "setAlarms": Schema.array("Replace ALL alarms (needs confirmReplace)", items: Schema.freeObject("{relativeOffset}|{absoluteDate}")),
+            "addAlarms": Schema.array("Alarms to ADD, e.g. [{relativeOffset:-600}] or [{location:\"place\", proximity:\"arrive\"}]", items: Schema.freeObject("{relativeOffset}|{absoluteDate}|{location, proximity}")),
+            "removeAlarms": Schema.array("Alarms to REMOVE (matched by offset/date, or place + direction)", items: Schema.freeObject("{relativeOffset}|{absoluteDate}|{location, proximity}")),
+            "setAlarms": Schema.array("Replace ALL alarms (needs confirmReplace)", items: Schema.freeObject("{relativeOffset}|{absoluteDate}|{location, proximity}")),
             "confirmReplace": Schema.boolean("Required to be true when using setAlarms"),
             "clearAlarms": Schema.boolean("Remove all alarms"),
             "completed": Schema.boolean("Mark completed/incomplete")
@@ -1157,8 +1157,11 @@ enum ReminderTools {
             reminder.recurrenceRules = [try Recurrence.rule(from: recurrence)]
         }
         if let alarmArray = args.array("alarms") {
+            // Built before the old ones are cleared: a place that cannot be
+            // resolved must leave the reminder as it was.
+            let alarms = try Alarms.build(from: alarmArray, allowLocation: true)
             reminder.alarms = nil
-            for alarm in Alarms.build(from: alarmArray) { reminder.addAlarm(alarm) }
+            for alarm in alarms { reminder.addAlarm(alarm) }
         }
     }
 
